@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+gunicorn
+aiobotocore
+faster-whisper
+TTS
+torch
+torchaudio
+pydantic
+python-multipart
