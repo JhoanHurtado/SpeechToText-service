@@ -1,7 +1,12 @@
+"""
+Punto de entrada principal de la API.
+Define los endpoints, la configuración de la aplicación y el ciclo de vida (startup/shutdown).
+"""
 import uuid
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 from contextlib import asynccontextmanager
 from fastapi.concurrency import run_in_threadpool
 
@@ -11,14 +16,19 @@ from .services import stt, tts
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Carga los modelos al iniciar la aplicación
+    """
+    Gestiona el ciclo de vida de la aplicación. Carga los modelos al inicio
+    y libera los recursos al final.
+    """
+    # --- Startup ---
     print("Cargando modelos...")
-    # Ejecuta la carga de modelos (síncrona) en un hilo para no bloquear el event loop
+    # Ejecuta las cargas de modelos (síncronas y pesadas) en un hilo separado
+    # para no bloquear el event loop de asyncio.
     await run_in_threadpool(loader.load_stt_model)
-    await run_in_threadpool(loader.load_tts_model)
+    await run_in_threadpool(loader.load_tts_models)
     await loader.create_s3_client()
     yield
-    # Limpieza (si es necesario) al apagar
+    # --- Shutdown ---
     print("Liberando recursos...")
     await loader.close_s3_client()
 
@@ -30,12 +40,19 @@ app = FastAPI(
 )
 
 class TTSRequest(BaseModel):
+    """Modelo de datos para las peticiones al endpoint /tts."""
     text: str
+    language: Literal["en", "es"] = Field("en", description="Idioma para la síntesis de voz ('en' o 'es').")
 
 @app.post("/stt", summary="Voz a Texto")
 async def speech_to_text(audio_file: UploadFile = File(...)):
     """
-    Recibe un archivo de audio y devuelve su transcripción.
+    Endpoint para convertir voz a texto.
+
+    Recibe un archivo de audio, lo transcribe usando el modelo STT y devuelve el texto.
+
+    Args:
+        audio_file (UploadFile): El archivo de audio a transcribir.
     """
     if not audio_file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="El archivo debe ser de tipo audio.")
@@ -50,10 +67,16 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
 @app.post("/tts", summary="Texto a Voz")
 async def text_to_speech(request: TTSRequest):
     """
-    Recibe un texto, genera el audio correspondiente, lo sube a S3 y devuelve la URL.
+    Endpoint para convertir texto a voz.
+
+    Recibe un texto y un idioma, genera el audio correspondiente, lo sube a S3
+    y devuelve una URL prefirmada para su descarga.
+
+    Args:
+        request (TTSRequest): El cuerpo de la petición con el texto y el idioma.
     """
     try:
-        audio_data = tts.generate_speech(request.text)
+        audio_data = tts.generate_speech(request.text, request.language)
         # Construye la ruta completa del archivo incluyendo el prefijo
         file_name = f"{config.S3_KEY_PREFIX}tts-audio-{uuid.uuid4()}.wav"
         audio_url = await s3_handler.upload_audio_to_s3(audio_data, file_name)

@@ -1,27 +1,35 @@
+"""
+Servicio de Text-to-Speech (TTS).
+Encapsula la lógica de síntesis de voz.
+"""
 from ..core.loader import get_tts_model
 import io
 
-def generate_speech(text: str) -> bytes:
+def generate_speech(text: str, lang: str) -> bytes:
     """
-    Sintetiza texto a voz usando el modelo Coqui TTS.
+    Sintetiza texto a voz en un idioma específico utilizando el modelo Coqui TTS correspondiente.
 
-    :param text: El texto a convertir.
-    :return: Un stream de bytes con el audio en formato WAV.
+    Args:
+        text (str): El texto a convertir en voz.
+        lang (str): El idioma del texto ('en' o 'es').
+
+    Returns:
+        bytes: Un stream de bytes con el audio resultante en formato WAV.
     """
-    tts_model = get_tts_model()
-    if not tts_model:
-        raise RuntimeError("El modelo TTS no está cargado.")
+    tts_model = get_tts_model(lang)
 
-    # Usamos un buffer en memoria para que tts_to_file escriba directamente en él.
+    # buffer en memoria para que tts_to_file escriba directamente en él.
     buffer = io.BytesIO()
 
-    # Para modelos de un solo hablante/idioma, los parámetros speaker y language no son necesarios.
+    # cosntruir los argumentos para tts_to_file dinámicamente, ya que algunos
+    # modelos son multi-hablante y otros no.
+    tts_kwargs = {}
     if tts_model.is_multi_speaker:
-        tts_model.tts_to_file(text=text, file_path=buffer, speaker=tts_model.speakers[0], language=tts_model.languages[0])
-    else:
-        tts_model.tts_to_file(text=text, file_path=buffer)
+        # uso el primer hablante disponible por defecto.
+        tts_kwargs["speaker"] = tts_model.speakers[0]
 
-    # Regresamos al inicio del buffer para leer su contenido.
+    tts_model.tts_to_file(text=text, file_path=buffer, **tts_kwargs)
+
+    # regresa al inicio del buffer para leer su contenido.
     buffer.seek(0)
-
     return buffer.read()
