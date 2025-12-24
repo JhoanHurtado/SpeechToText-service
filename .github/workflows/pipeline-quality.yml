@@ -63,6 +63,7 @@ jobs:
           host: ${{ env.LIGHTSAIL_HOST }}
           username: ${{ env.LIGHTSAIL_USERNAME }}
           key: ${{ env.LIGHTSAIL_SSH_KEY }}
+          command_timeout: 30m
           script: |
             cd /home/${{ env.LIGHTSAIL_USERNAME }}/speech-service-${{ env.DEPLOY_ENV }}
             sudo docker compose -p speech-service-${{ env.DEPLOY_ENV }} up -d --build --remove-orphans

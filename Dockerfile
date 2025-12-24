@@ -20,6 +20,7 @@ WORKDIR /app
 # Copiamos el archivo de requerimientos e instalamos las dependencias de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copiamos el código fuente de la aplicación (la carpeta src)
