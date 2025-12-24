@@ -14,6 +14,9 @@ AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_KEY_PREFIX = os.getenv("S3_KEY_PREFIX", "") # prefijo o carpeta en el bucket
 
+# --- Seguridad de la API ---
+API_KEY = os.getenv("API_KEY")
+
 # --- Configuración de Modelos de IA ---
 STT_MODEL = os.getenv("STT_MODEL", "base") # "base", "small", "medium", "large-v2"
 # Modelos TTS Tacotron2-DDC para inglés y español.

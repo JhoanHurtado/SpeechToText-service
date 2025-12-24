@@ -3,14 +3,14 @@ Punto de entrada principal de la API.
 Define los endpoints, la configuración de la aplicación y el ciclo de vida (startup/shutdown).
 """
 import uuid
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Literal
 from contextlib import asynccontextmanager
 from fastapi.concurrency import run_in_threadpool
 
-from .core import loader, s3_handler
+from .core import loader, s3_handler, security
 from . import config
 from .services import stt, tts
 
@@ -44,7 +44,10 @@ class TTSRequest(BaseModel):
     text: str
     language: Literal["en", "es"] = Field("en", description="Idioma para la síntesis de voz ('en' o 'es').")
 
-@app.post("/stt", summary="Voz a Texto")
+@app.post(
+    "/stt",
+    summary="Voz a Texto",
+    dependencies=[Depends(security.get_api_key)])
 async def speech_to_text(audio_file: UploadFile = File(...)):
     """
     Endpoint para convertir voz a texto.
@@ -64,7 +67,10 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error durante la transcripción: {str(e)}")
 
-@app.post("/tts", summary="Texto a Voz")
+@app.post(
+    "/tts",
+    summary="Texto a Voz",
+    dependencies=[Depends(security.get_api_key)])
 async def text_to_speech(request: TTSRequest):
     """
     Endpoint para convertir texto a voz.

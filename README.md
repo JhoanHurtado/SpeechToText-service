@@ -12,6 +12,7 @@ La arquitectura está diseñada para ser asíncrona y de alto rendimiento, con s
 - **Inferencia Rápida**: Utiliza `faster-whisper`, una reimplementación optimizada de Whisper para transcripciones hasta 4 veces más rápidas.
 - **TTS Bilingüe (EN/ES)**: Soporta la generación de voz en inglés y español utilizando modelos `Tacotron2-DDC` de alta calidad.
 - **Seguridad**: Los archivos de audio generados se exponen a través de URLs prefirmadas de S3 con tiempo de expiración, en lugar de URLs públicas.
+- **Protección de Endpoints**: Uso de claves de API (`API Key`) para asegurar el acceso a los endpoints y prevenir el uso no autorizado.
 - **Optimización de Recursos**: Carga los modelos de IA en memoria una sola vez al inicio de la aplicación para minimizar la latencia en las peticiones.
 - **Soporte para GPU**: Detecta y utiliza automáticamente una GPU (CUDA) si está disponible, para una aceleración masiva de la inferencia.
  
@@ -25,6 +26,7 @@ La arquitectura está diseñada para ser asíncrona y de alto rendimiento, con s
 | **Texto a Voz (TTS)** | `Coqui TTS` (`TTS`)    | `tts_models/en/ljspeech/tacotron2-DDC` (EN) y `tts_models/es/mai/tacotron2-DDC` (ES) | Modelos de alta calidad con una arquitectura consistente para ambos idiomas.                                 |
 | **Almacenamiento S3** | `aiobotocore`          | N/A                       | Permite interactuar con S3 de forma asíncrona, crucial para no bloquear la API durante la subida de archivos. |
 | **Estructura Datos**  | `Pydantic`             | N/A                       | Validación de datos de entrada/salida integrada en FastAPI.                                                 |
+| **Seguridad API**     | `FastAPI.Security`     | N/A                       | Implementación sencilla y estándar de autenticación por clave de API en el header.                          |
  
 ## 📂 Estructura del Proyecto
  
@@ -35,7 +37,8 @@ project_root/
 │   ├── config.py           # Configuración (variables de entorno)
 │   ├── core/
 │   │   ├── s3_handler.py   # Gestión asíncrona con S3 (Aiobotocore)
-│   │   └── loader.py       # Carga de modelos STT y TTS al inicio
+│   │   ├── loader.py       # Carga de modelos STT y TTS al inicio
+│   │   └── security.py     # Lógica de autenticación (API Key)
 │   └── services/
 │       ├── stt.py          # Lógica de transcripción (faster-whisper)
 │       └── tts.py          # Lógica de generación de audio (Coqui TTS)
@@ -47,24 +50,28 @@ project_root/
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone <url-del-repositorio>
-    cd <nombre-del-repositorio>
+    git clone <url-del-repositorio> && cd SpeechToText-service
     ```
 
-2.  **Crear y activar un entorno virtual:**
+2.  **Instalar dependencias del sistema:**
+    Los modelos TTS requieren `espeak-ng` para la fonetización del texto. `libsndfile1` es necesaria para el procesamiento de audio.
     ```bash
-    python3 -m venv .venv
+    sudo apt-get update && sudo apt-get install -y espeak-ng libsndfile1
+    ```
+
+3.  **Crear y activar un entorno virtual de Python:**
+    Se recomienda usar Python 3.11 o superior.
+    ```bash
+    python3.11 -m venv .venv
     source .venv/bin/activate
     ```
 
-3.  **Instalar dependencias:**
-    Asegúrate de tener `libsndfile1` instalado en sistemas Debian/Ubuntu para procesar audio.
+4.  **Instalar dependencias de Python:**
     ```bash
-    sudo apt-get update && sudo apt-get install libsndfile1
     pip install -r requirements.txt
     ```
 
-4.  **Configurar variables de entorno:**
+5.  **Configurar variables de entorno:**
     Crea un archivo `.env` a partir de `.env.example` y complétalo con tus credenciales de AWS y configuración de S3.
     ```bash
     cp .env.example .env
