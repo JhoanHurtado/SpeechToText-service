@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  speech-service:
+    # Nombre dinámico del contenedor para permitir múltiples entornos en el mismo host
+    container_name: speech-to-text-api-${DEPLOY_ENV:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Puerto configurable mediante variable de entorno
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    # Carga automática de variables de entorno definidas en el archivo .env
+    env_file:
+      - .env
+    # Volúmenes para persistir los modelos de IA y evitar descargas repetitivas
+    volumes:
+      # Cache para modelos de HuggingFace (usado por faster-whisper)
+      - hf_cache:/root/.cache/huggingface
+      # Cache para modelos de Coqui TTS
+      - tts_cache:/root/.local/share/tts
+    # Red interna para comunicación con otros contenedores
+    networks:
+      - speech_network
+    restart: unless-stopped
+    # Descomenta las siguientes líneas si tienes GPU NVIDIA y nvidia-container-toolkit instalado
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+networks:
+  speech_network:
+    driver: bridge
+
+volumes:
+  hf_cache:
+  tts_cache:

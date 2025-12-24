@@ -100,3 +100,77 @@ gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app
 *   `-k uvicorn.workers.UvicornWorker`: Especifica que `uvicorn` manejará las peticiones dentro de cada worker de `gunicorn`.
 
 **Recomendación de Entorno:** Para la máxima velocidad, despliega en una máquina virtual o contenedor Docker con una **GPU** y las librerías CUDA/cuDNN instaladas. La inferencia en GPU es significativamente más rápida, especialmente para TTS.
+
+
+## ⚙️ Configuración Local (Python)
+
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone <url-del-repositorio> && cd SpeechToText-service
+    ```
+
+2.  **Instalar dependencias del sistema:**
+    ```bash
+    sudo apt-get update && sudo apt-get install -y espeak-ng libsndfile1
+    ```
+
+3.  **Configurar entorno:**
+    ```bash
+    python3.11 -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    cp .env.example .env
+    # Edita el .env con los valores de la tabla de Variables de Entorno
+    ```
+
+4.  **Ejecutar:**
+    ```bash
+    uvicorn src.main:app --reload
+    ```
+
+## 🐳 Ejecución con Docker (Recomendado)
+
+1.  Asegúrate de tener el archivo `.env` configurado.
+2.  Levanta el servicio:
+    ```bash
+    docker-compose up -d --build
+    ```
+
+    *Nota: Docker gestionará automáticamente los volúmenes para cachear los modelos de IA, evitando descargas repetidas.*
+
+## ☁️ CI/CD y Despliegue en AWS Lightsail
+
+El proyecto cuenta con pipelines de **GitHub Actions** configurados para desplegar automáticamente en una instancia de **AWS Lightsail (VM)** mediante SSH y Docker Compose.
+
+### Estrategia de Ramas y Ambientes
+
+| Rama | Ambiente | Puerto | Modelo STT | Prefijo S3 |
+| :--- | :--- | :--- | :--- | :--- |
+| `develop` | Desarrollo | `8001` | `base` | `dev/` |
+| `quality` | Calidad (QA) | `8002` | `base` | `qa/` |
+| `main` | Producción | `8000` | `medium` | `prod/` |
+
+### 🔐 Secretos de GitHub Requeridos
+
+Para que los flujos de trabajo funcionen correctamente, debes configurar los siguientes secretos en tu repositorio (Settings > Secrets and variables > Actions):
+
+#### Credenciales de Conexión (SSH)
+*   `LIGHTSAIL_HOST`: Dirección IP pública de tu instancia Lightsail.
+*   `LIGHTSAIL_USERNAME`: Usuario SSH (ej: `ubuntu` o `bitnami`).
+*   `LIGHTSAIL_SSH_KEY`: Clave privada SSH (.pem) para acceder a la instancia.
+
+#### Variables de Entorno de la Aplicación
+Estas se inyectan en el contenedor durante el despliegue:
+*   `API_KEY`: Clave para proteger los endpoints.
+*   `APP_AWS_ACCESS_KEY_ID`: Credenciales para que la app acceda a S3.
+*   `APP_AWS_SECRET_ACCESS_KEY`: Credenciales para que la app acceda a S3.
+*   `AWS_REGION`: Región de AWS para S3.
+
+📦 Producción
+
+Para despliegues manuales en producción, se recomienda el uso de gunicorn para gestionar los workers de uvicorn:
+Bash
+
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app
+
+    Consejo de Rendimiento: Para obtener la máxima velocidad, despliega en una instancia con GPU NVIDIA y asegúrate de que los drivers CUDA estén instalados. La inferencia en GPU reduce drásticamente los tiempos de procesamiento de TTS.
