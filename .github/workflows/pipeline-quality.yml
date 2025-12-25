@@ -2,7 +2,7 @@ name: Deploy to AWS Lightsail (Quality)
 
 on:
   push:
-    branches: [ "quality" ]
+    branches: [ "quality---" ]
   workflow_dispatch:
 
 jobs:
